@@ -10,9 +10,9 @@ import (
 
 func ExampleQueue() {
 	var q queue.Queue[int]
-	q.Push(1)
-	q.Push(2)
 	q.Push(3)
+	q.Push(1)
+	q.Push(4)
 
 	for !q.IsEmpty() {
 		x, ok := q.Pop()
@@ -23,9 +23,25 @@ func ExampleQueue() {
 	}
 
 	// Output:
-	// 1
-	// 2
 	// 3
+	// 1
+	// 4
+}
+
+func ExampleAll() {
+	var q queue.Queue[int]
+	q.Push(3)
+	q.Push(1)
+	q.Push(4)
+
+	for x := range q.All() {
+		fmt.Println(x)
+	}
+
+	// Output:
+	// 3
+	// 1
+	// 4
 }
 
 func TestRandomized(t *testing.T) {

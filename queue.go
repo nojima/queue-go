@@ -1,5 +1,7 @@
 package queue
 
+import "iter"
+
 // Queue is a FIFO queue backed by a circular buffer.
 // The zero value for Queue is an empty queue ready to use.
 type Queue[T any] struct {
@@ -50,6 +52,19 @@ func (q *Queue[T]) Peek() (T, bool) {
 	}
 
 	return q.buffer[q.headIndex()], true
+}
+
+// All returns an iterator over all elements in the queue.
+// Do not modify the queue while iterating.
+func (q *Queue[T]) All() iter.Seq[T] {
+	return func(yield func(T) bool) {
+		for i := q.head; i < q.tail; i++ {
+			idx := i & (len(q.buffer) - 1)
+			if !yield(q.buffer[idx]) {
+				break
+			}
+		}
+	}
 }
 
 // headIndex returns the index of the head element in the buffer.
