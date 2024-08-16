@@ -3,6 +3,7 @@ package queue_test
 import (
 	"fmt"
 	"math/rand"
+	"slices"
 	"testing"
 
 	"github.com/nojima/queue-go"
@@ -40,6 +41,49 @@ func ExampleQueue_All() {
 	// 3
 	// 1
 	// 4
+}
+
+func TestQueue_Backward(t *testing.T) {
+	testCases := []struct {
+		title    string
+		elements []int
+	}{
+		{
+			title:    "empty",
+			elements: []int{},
+		},
+		{
+			title:    "one element",
+			elements: []int{1},
+		},
+		{
+			title:    "multiple elements",
+			elements: []int{3, 1, 4},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.title, func(t *testing.T) {
+			// Setup
+			var q queue.Queue[int]
+			for _, x := range tc.elements {
+				q.Push(x)
+			}
+
+			// Exercise
+			var actual []int
+			for x := range q.Backward() {
+				actual = append(actual, x)
+			}
+
+			// Verify
+			expected := slices.Clone(tc.elements)
+			slices.Reverse(expected)
+			if !slices.Equal(actual, expected) {
+				t.Errorf("actual: %v; want: %v", actual, expected)
+			}
+		})
+	}
 }
 
 func TestRandomized(t *testing.T) {

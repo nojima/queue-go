@@ -71,6 +71,18 @@ func (q *Queue[T]) All() iter.Seq[T] {
 	}
 }
 
+// Backward returns an iterator over all elements in the queue in reverse order (newest first).
+// Do not modify the queue while iterating.
+func (q *Queue[T]) Backward() iter.Seq[T] {
+	return func(yield func(T) bool) {
+		for i := q.tail; i > q.head; i-- {
+			if !yield(q.buffer[q.index(i-1)]) {
+				break
+			}
+		}
+	}
+}
+
 // index converts a virtual index into a buffer index.
 func (q *Queue[T]) index(i uint64) uint64 {
 	return i & (uint64(len(q.buffer)) - 1)
