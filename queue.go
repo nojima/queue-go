@@ -26,7 +26,6 @@ type Queue[T any] struct {
 
 // Len returns the number of elements in the queue.
 func (q *Queue[T]) Len() int {
-	// Because builtin len() returns an int, q.Len() should return an int too.
 	return q.length
 }
 
