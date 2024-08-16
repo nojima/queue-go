@@ -1,6 +1,9 @@
 package queue
 
-import "iter"
+import (
+	"fmt"
+	"iter"
+)
 
 // Queue is a FIFO queue backed by a circular buffer.
 // The zero value for Queue is an empty queue ready to use.
@@ -81,6 +84,15 @@ func (q *Queue[T]) Backward() iter.Seq[T] {
 			}
 		}
 	}
+}
+
+// At returns the element at the specified index.
+// If the index is out of range, it panics.
+func (q *Queue[T]) At(i int) T {
+	if i < 0 || i >= q.Len() {
+		panic(fmt.Sprintf("queue: index out of range: i=%d, len=%d", i, q.Len()))
+	}
+	return q.buffer[q.index(q.head+uint64(i))]
 }
 
 // index converts a virtual index into a buffer index.

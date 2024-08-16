@@ -86,6 +86,22 @@ func TestQueue_Backward(t *testing.T) {
 	}
 }
 
+func TestQueue_At(t *testing.T) {
+	var q queue.Queue[int]
+	for _, x := range []int{3, 1, 4, 1, 5, 9, 2} {
+		q.Push(x)
+	}
+	q.Pop()
+	q.Pop()
+
+	for i, expected := range []int{4, 1, 5, 9, 2} {
+		actual := q.At(i)
+		if actual != expected {
+			t.Errorf("At(%v) = %v; want %v", i, actual, expected)
+		}
+	}
+}
+
 func TestRandomized(t *testing.T) {
 	var q queue.Queue[int]
 	var v []int
@@ -130,6 +146,14 @@ func TestRandomized(t *testing.T) {
 		}
 		if x != expectedX || ok != expectedOK {
 			t.Errorf("Peek() = %v, %v; want %v, %v", x, ok, expectedX, expectedOK)
+		}
+
+		if !q.IsEmpty() {
+			x := q.At(q.Len() - 1)
+			expectedX := v[len(v)-1]
+			if x != expectedX {
+				t.Errorf("At(%v) = %v; want %v", q.Len()-1, x, expectedX)
+			}
 		}
 	}
 }
