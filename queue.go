@@ -9,14 +9,17 @@ import (
 // The zero value for Queue is an empty queue ready to use.
 // Queue is NOT safe for concurrent use.
 type Queue[T any] struct {
+	// The index of the first element in the queue.
 	// Invariant:
 	//   0 <= head < len(buffer)  (len(buffer) != 0)
 	//   head == 0                (len(buffer) == 0)
-	head uint64
+	head int
 
-	// the number of elements in the queue.
-	length uint64
+	// The number of elements in the queue.
+	// Invariant: length <= len(buffer)
+	length int
 
+	// The circular buffer to store elements.
 	// Invariant: len(buffer) is a power of 2 or zero
 	buffer []T
 }
@@ -24,7 +27,7 @@ type Queue[T any] struct {
 // Len returns the number of elements in the queue.
 func (q *Queue[T]) Len() int {
 	// Because builtin len() returns an int, q.Len() should return an int too.
-	return int(q.length)
+	return q.length
 }
 
 // IsEmpty returns true if the queue is empty.
@@ -99,23 +102,23 @@ func (q *Queue[T]) At(i int) T {
 	if i < 0 || i >= q.Len() {
 		panic(fmt.Sprintf("queue: index out of range: i=%d, len=%d", i, q.Len()))
 	}
-	return q.buffer[q.wrap(q.head+uint64(i))]
+	return q.buffer[q.wrap(q.head+i)]
 }
 
 // wrap converts an index to the corresponding index in the buffer.
-func (q *Queue[T]) wrap(i uint64) uint64 {
-	return i & (uint64(len(q.buffer)) - 1)
+func (q *Queue[T]) wrap(i int) int {
+	return i & (len(q.buffer) - 1)
 }
 
 // isBufferFull returns true if the buffer is full.
 func (q *Queue[T]) isBufferFull() bool {
-	return uint64(len(q.buffer)) == q.length
+	return len(q.buffer) == q.length
 }
 
 // grow doubles the buffer size.
 // This method is called when the buffer is full.
 func (q *Queue[T]) grow() {
-	capacity := uint64(len(q.buffer))
+	capacity := len(q.buffer)
 	if capacity == 0 {
 		q.buffer = make([]T, 1)
 		return
