@@ -9,11 +9,13 @@ import (
 // The zero value for Queue is an empty queue ready to use.
 // Queue is NOT safe for concurrent use.
 type Queue[T any] struct {
-	// Invariant: head <= tail (head == tail means the queue is empty)
-	// Invariant: tail - head <= len(buffer)
-	// Note that head and tail can be greater than len(buffer).
-	head uint64 // a virtual index to read from
-	tail uint64 // a virtual index to write to
+	// Invariant:
+	//   0 <= head < len(buffer)  (len(buffer) != 0)
+	//   head == 0                (len(buffer) == 0)
+	head uint64
+
+	// the number of elements in the queue.
+	length uint64
 
 	// Invariant: len(buffer) is a power of 2 or zero
 	buffer []T
@@ -22,12 +24,12 @@ type Queue[T any] struct {
 // Len returns the number of elements in the queue.
 func (q *Queue[T]) Len() int {
 	// Because builtin len() returns an int, q.Len() should return an int too.
-	return int(q.tail - q.head)
+	return int(q.length)
 }
 
 // IsEmpty returns true if the queue is empty.
 func (q *Queue[T]) IsEmpty() bool {
-	return q.head == q.tail
+	return q.length == 0
 }
 
 // Push adds an element to the back of the queue.
@@ -36,8 +38,8 @@ func (q *Queue[T]) Push(x T) {
 		q.grow()
 	}
 
-	q.buffer[q.index(q.tail)] = x
-	q.tail++
+	q.buffer[q.wrap(q.head+q.length)] = x
+	q.length++
 }
 
 // Pop removes and returns the element at the front of the queue.
@@ -48,8 +50,9 @@ func (q *Queue[T]) Pop() (T, bool) {
 		return zero, false
 	}
 
-	x := q.buffer[q.index(q.head)]
-	q.head++
+	x := q.buffer[q.head]
+	q.head = q.wrap(q.head + 1)
+	q.length--
 	return x, true
 }
 
@@ -61,15 +64,16 @@ func (q *Queue[T]) Peek() (T, bool) {
 		return zero, false
 	}
 
-	return q.buffer[q.index(q.head)], true
+	return q.buffer[q.head], true
 }
 
 // All returns an iterator over all elements in the queue.
 // Do not modify the queue while iterating.
 func (q *Queue[T]) All() iter.Seq[T] {
 	return func(yield func(T) bool) {
-		for i := q.head; i < q.tail; i++ {
-			if !yield(q.buffer[q.index(i)]) {
+		head := q.head
+		for i := range q.length {
+			if !yield(q.buffer[q.wrap(head+i)]) {
 				break
 			}
 		}
@@ -80,8 +84,9 @@ func (q *Queue[T]) All() iter.Seq[T] {
 // Do not modify the queue while iterating.
 func (q *Queue[T]) Backward() iter.Seq[T] {
 	return func(yield func(T) bool) {
-		for i := q.tail; i > q.head; i-- {
-			if !yield(q.buffer[q.index(i-1)]) {
+		last := q.head + q.length - 1
+		for i := range q.length {
+			if !yield(q.buffer[q.wrap(last-i)]) {
 				break
 			}
 		}
@@ -94,17 +99,17 @@ func (q *Queue[T]) At(i int) T {
 	if i < 0 || i >= q.Len() {
 		panic(fmt.Sprintf("queue: index out of range: i=%d, len=%d", i, q.Len()))
 	}
-	return q.buffer[q.index(q.head+uint64(i))]
+	return q.buffer[q.wrap(q.head+uint64(i))]
 }
 
-// index converts a virtual index into a buffer index.
-func (q *Queue[T]) index(i uint64) uint64 {
+// wrap converts an index to the corresponding index in the buffer.
+func (q *Queue[T]) wrap(i uint64) uint64 {
 	return i & (uint64(len(q.buffer)) - 1)
 }
 
 // isBufferFull returns true if the buffer is full.
 func (q *Queue[T]) isBufferFull() bool {
-	return q.tail-q.head == uint64(len(q.buffer))
+	return uint64(len(q.buffer)) == q.length
 }
 
 // grow doubles the buffer size.
@@ -117,13 +122,10 @@ func (q *Queue[T]) grow() {
 	}
 
 	newBuffer := make([]T, capacity*2)
-	head := q.index(q.head)
+	head := q.wrap(q.head)
 	n := copy(newBuffer, q.buffer[head:])
 	copy(newBuffer[n:], q.buffer[:head])
 
-	length := q.tail - q.head
-
 	q.head = 0
-	q.tail = length
 	q.buffer = newBuffer
 }
