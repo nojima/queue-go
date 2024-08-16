@@ -21,14 +21,13 @@ func ExampleQueue() {
 		}
 		fmt.Println(x)
 	}
-
 	// Output:
 	// 3
 	// 1
 	// 4
 }
 
-func ExampleAll() {
+func ExampleQueue_All() {
 	var q queue.Queue[int]
 	q.Push(3)
 	q.Push(1)
@@ -37,7 +36,6 @@ func ExampleAll() {
 	for x := range q.All() {
 		fmt.Println(x)
 	}
-
 	// Output:
 	// 3
 	// 1
