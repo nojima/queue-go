@@ -32,7 +32,9 @@ func (q *Queue[T]) IsEmpty() bool {
 
 // Push adds an element to the back of the queue.
 func (q *Queue[T]) Push(x T) {
-	q.growIfBufferIsFull()
+	if q.isBufferFull() {
+		q.grow()
+	}
 
 	q.buffer[q.index(q.tail)] = x
 	q.tail++
@@ -100,16 +102,16 @@ func (q *Queue[T]) index(i uint64) uint64 {
 	return i & (uint64(len(q.buffer)) - 1)
 }
 
-// growIfBufferIsFull double the buffer size if the buffer is full.
-func (q *Queue[T]) growIfBufferIsFull() {
-	length := q.tail - q.head
+// isBufferFull returns true if the buffer is full.
+func (q *Queue[T]) isBufferFull() bool {
+	return q.tail-q.head == uint64(len(q.buffer))
+}
+
+// grow doubles the buffer size.
+// This method is called when the buffer is full.
+func (q *Queue[T]) grow() {
 	capacity := uint64(len(q.buffer))
-	if length < capacity {
-		return
-	}
 	if capacity == 0 {
-		q.head = 0
-		q.tail = 0
 		q.buffer = make([]T, 1)
 		return
 	}
@@ -118,6 +120,8 @@ func (q *Queue[T]) growIfBufferIsFull() {
 	head := q.index(q.head)
 	n := copy(newBuffer, q.buffer[head:])
 	copy(newBuffer[n:], q.buffer[:head])
+
+	length := q.tail - q.head
 
 	q.head = 0
 	q.tail = length

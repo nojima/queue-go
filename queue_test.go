@@ -157,3 +157,21 @@ func TestRandomized(t *testing.T) {
 		}
 	}
 }
+
+func BenchmarkPushPop(b *testing.B) {
+	var q queue.Queue[int]
+	for i := 0; i < b.N; i++ {
+		q.Push(i)
+	}
+	var expected int
+	for !q.IsEmpty() {
+		x, ok := q.Pop()
+		if !ok {
+			b.Fatal("queue should not be empty here")
+		}
+		if x != expected {
+			b.Errorf("Pop() = %v; want %v", x, expected)
+		}
+		expected++
+	}
+}
