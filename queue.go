@@ -3,6 +3,7 @@ package queue
 import (
 	"fmt"
 	"iter"
+	"math/bits"
 )
 
 // Queue is a FIFO queue backed by a circular buffer.
@@ -36,12 +37,26 @@ func (q *Queue[T]) IsEmpty() bool {
 
 // Push adds an element to the back of the queue.
 func (q *Queue[T]) Push(x T) {
-	if q.isBufferFull() {
-		q.grow()
+	if q.remainingCapacity() == 0 {
+		q.reserve(len(q.buffer) + 1)
 	}
 
 	q.buffer[q.wrap(q.head+q.length)] = x
 	q.length++
+}
+
+// PushMany adds multiple elements to the back of the queue.
+// PushMany is more efficient than calling Push multiple times.
+func (q *Queue[T]) PushMany(xs []T) {
+	if q.remainingCapacity() < len(xs) {
+		q.reserve(q.length + len(xs))
+	}
+
+	tail := q.wrap(q.head + q.length)
+	n := copy(q.buffer[tail:], xs)
+	copy(q.buffer, xs[n:])
+
+	q.length += len(xs)
 }
 
 // Pop removes and returns the element at the front of the queue.
@@ -109,25 +124,34 @@ func (q *Queue[T]) wrap(i int) int {
 	return i & (len(q.buffer) - 1)
 }
 
-// isBufferFull returns true if the buffer is full.
-func (q *Queue[T]) isBufferFull() bool {
-	return len(q.buffer) == q.length
+// remainingCapacity returns the number of elements that the buffer can still accommodate.
+func (q *Queue[T]) remainingCapacity() int {
+	return len(q.buffer) - q.length
 }
 
-// grow doubles the buffer size.
-// This method is called when the buffer is full.
-func (q *Queue[T]) grow() {
+// reserve ensures that the buffer has enough capacity to store requiredCapacity elements.
+// Caller must guarantee that requiredCapacity > len(buffer).
+func (q *Queue[T]) reserve(requiredCapacity int) {
+	newCapacity := bitCeil(uint(requiredCapacity))
+
 	capacity := len(q.buffer)
 	if capacity == 0 {
-		q.buffer = make([]T, 1)
+		q.buffer = make([]T, newCapacity)
 		return
 	}
 
-	newBuffer := make([]T, capacity*2)
+	newBuffer := make([]T, newCapacity)
 	head := q.wrap(q.head)
-	n := copy(newBuffer, q.buffer[head:])
-	copy(newBuffer[n:], q.buffer[:head])
+	length := q.length
+	n := copy(newBuffer, q.buffer[head:min(head+length, capacity)])
+	copy(newBuffer[n:], q.buffer[:length-n])
 
 	q.head = 0
 	q.buffer = newBuffer
+}
+
+// bitCeil returns the minimum power of 2 that is greater than or equal to x.
+// It returns 0 when x is 0.
+func bitCeil(x uint) uint {
+	return 1 << (bits.UintSize - bits.LeadingZeros(x-1))
 }

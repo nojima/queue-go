@@ -103,17 +103,47 @@ func TestQueue_At(t *testing.T) {
 }
 
 func TestRandomized(t *testing.T) {
-	var q queue.Queue[int]
-	var v []int
+	for k := 0; k < 1000; k++ {
+		var q queue.Queue[int]
+		var v []int
 
-	for i := 0; i < 10000; i++ {
-		r := rand.Uint32()
-		if r%2 == 0 {
-			q.Push(i)
-			v = append(v, i)
-		} else {
-			x, ok := q.Pop()
+		for i := 0; i < 1000; i++ {
+			r := rand.Uint32()
+			switch r % 3 {
+			case 0:
+				q.Push(i)
+				v = append(v, i)
+			case 1:
+				var xs []int
+				for range rand.Intn(10) {
+					xs = append(xs, rand.Int())
+				}
+				q.PushMany(xs)
+				v = append(v, xs...)
+			case 2:
+				x, ok := q.Pop()
 
+				var expectedX int
+				var expectedOK bool
+				if len(v) == 0 {
+					expectedX = 0
+					expectedOK = false
+				} else {
+					expectedX = v[0]
+					expectedOK = true
+					v = v[1:]
+				}
+
+				if x != expectedX || ok != expectedOK {
+					t.Errorf("Pop() = %v, %v; want %v, %v", x, ok, expectedX, expectedOK)
+				}
+			}
+
+			if q.Len() != len(v) {
+				t.Errorf("Len() = %v; want %v", q.Len(), len(v))
+			}
+
+			x, ok := q.Peek()
 			var expectedX int
 			var expectedOK bool
 			if len(v) == 0 {
@@ -122,37 +152,17 @@ func TestRandomized(t *testing.T) {
 			} else {
 				expectedX = v[0]
 				expectedOK = true
-				v = v[1:]
 			}
-
 			if x != expectedX || ok != expectedOK {
-				t.Errorf("Pop() = %v, %v; want %v, %v", x, ok, expectedX, expectedOK)
+				t.Errorf("Peek() = %v, %v; want %v, %v", x, ok, expectedX, expectedOK)
 			}
-		}
 
-		if q.Len() != len(v) {
-			t.Errorf("Len() = %v; want %v", q.Len(), len(v))
-		}
-
-		x, ok := q.Peek()
-		var expectedX int
-		var expectedOK bool
-		if len(v) == 0 {
-			expectedX = 0
-			expectedOK = false
-		} else {
-			expectedX = v[0]
-			expectedOK = true
-		}
-		if x != expectedX || ok != expectedOK {
-			t.Errorf("Peek() = %v, %v; want %v, %v", x, ok, expectedX, expectedOK)
-		}
-
-		if !q.IsEmpty() {
-			x := q.At(q.Len() - 1)
-			expectedX := v[len(v)-1]
-			if x != expectedX {
-				t.Errorf("At(%v) = %v; want %v", q.Len()-1, x, expectedX)
+			if !q.IsEmpty() {
+				x := q.At(q.Len() - 1)
+				expectedX := v[len(v)-1]
+				if x != expectedX {
+					t.Errorf("At(%v) = %v; want %v", q.Len()-1, x, expectedX)
+				}
 			}
 		}
 	}
